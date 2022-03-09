@@ -1,70 +1,32 @@
-from numbers import Number
-from typing import Dict
+# import logging
+# from typing import TYPE_CHECKING, Dict
 
-import torch
-import torchmetrics as tm
-from torch import nn
+# import torchmetrics as tm
 
-from tallow.datasets import Dataset
-from tallow.nn.misc import metric_forward, module_forward
+# from tallow.data.datasets import Dataset
+# from tallow.evaluators import trainer_evaluator
 
-from ..trainer import Trainer
-from . import Hook
+# from .hook import Hook
 
-
-class EvaluateHook(Hook):
-    def __init__(
-        self, datasets: Dict[str, Dataset], metric: tm.Metric = None
-    ) -> None:
-        super().__init__()
-        self._datasets = datasets
-        self._metric = metric
-
-    def on_train_begin(self, trainer: Trainer):
-        trainer.optimizer
-        if self._metric is None:
-            self._metric = trainer.metric.clone()
-
-    def on_valid_end(self, trainer: Trainer):
-        for key in self._datasets:
-            metric_values = evaluate_model(
-                trainer.model, self._datasets[key], self._metric
-            )
-            trainer.logger.info(
-                "Evaluate %s: %s", key, format_metric_dict(metric_values)
-            )
+# if TYPE_CHECKING:
+#     from tallow.trainers.trainer import Trainer
 
 
-def format_metric_dict(d: Dict[str, Number]):
-    string = ""
-    for k, v in d.items():
-        string += f"|{k} {v:.4f}"
-
-    if string:
-        string += "|"
-
-    return string
+# logger = logging.getLogger(__name__)
 
 
-@torch.no_grad()
-def evaluate_model(
-    model: nn.Module, dataset: Dataset, metric: tm.Metric
-) -> Dict[str, Number]:
-    metric.reset()
+# class EvaluateHook(Hook):
+#     def __init__(
+#         self, datasets: Dict[str, Dataset], metric: tm.Metric = None
+#     ) -> None:
+#         super().__init__()
+#         self._datasets = datasets
+#         self._metric = metric
+#         self._evaluator = None
 
-    _prev = model.training
-    model.eval()
-    for model_inputs in dataset:
-        model_outputs = module_forward(model, **model_inputs)
-        metric_forward(metric, **model_inputs, **model_outputs)
-    model.train(_prev)
+#     def on_train_begin(self, trainer: "Trainer"):
+#         self._evaluator = trainer_evaluator(trainer, self._metric)
 
-    metric_tensors = metric.compute()
-    if isinstance(metric_tensors, torch.Tensor):
-        metric_name = metric.__class__.__name__.lower()
-        metric_tensors = {metric_name: metric_tensors}
-
-    metric_values = {}
-    for key in metric_tensors:
-        metric_values[key] = metric_tensors[key].item()
-    return metric_values
+#     def on_valid_end(self, trainer: "Trainer"):
+#         result_dataframe = self._evaluator.execute(self._datasets)
+#         logger.info("\n" + result_dataframe.to_string())

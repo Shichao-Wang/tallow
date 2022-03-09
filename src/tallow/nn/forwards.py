@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import torch
 from molurus import build_fn_kwargs
@@ -9,17 +9,15 @@ from torch.nn.utils.rnn import PackedSequence
 from tallow.metrics import TorchMetricProtocol
 
 
-def module_forward(module: nn.Module, **kwargs):
-    forward_kwargs = build_fn_kwargs(module.forward, **kwargs)
-    outputs = module(**forward_kwargs)
-    return outputs
+def module_forward(module: nn.Module, *dict_args: Dict, **kwargs):
+    forward_kwargs = build_fn_kwargs(module.forward, *dict_args, **kwargs)
+    return module(**forward_kwargs)
 
 
-@torch.no_grad()
 def metric_forward(
-    metric: TorchMetricProtocol, **kwargs
+    metric: TorchMetricProtocol, *dict_args: Dict, **kwargs
 ) -> Dict[str, torch.Tensor]:
-    update_kwargs = build_fn_kwargs(metric.update, **kwargs)
+    update_kwargs = build_fn_kwargs(metric.update, *dict_args, **kwargs)
     return metric(**update_kwargs)
 
 
@@ -82,7 +80,7 @@ def mh_attention_forward(
     value: torch.Tensor,
     key_mask: Optional[torch.Tensor] = None,
     attn_mask: Optional[torch.Tensor] = None,
-):
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Arguments:
         query: (*, q_len, q_size)
@@ -90,6 +88,7 @@ def mh_attention_forward(
         value: (*, m_len, v_size)
         key_mask: (*, m_len)
     """
+    batch_first = not getattr(mh, "batch_first", False)
     *outer_sizes, q_len, _ = query.size()
     query, key, value = [
         x.view(-1, *x.size()[-2:]) for x in [query, key, value]
@@ -97,7 +96,7 @@ def mh_attention_forward(
     if key_mask is not None:
         key_mask = key_mask.view(-1, key_mask.size(-1))
 
-    if not mh.batch_first:
+    if not batch_first:
         query, key, value = [x.transpose(0, 1) for x in [query, key, value]]
 
     x, weight = mh(
@@ -107,10 +106,10 @@ def mh_attention_forward(
         key_padding_mask=~key_mask if key_mask is not None else None,
         attn_mask=None if attn_mask is None else ~attn_mask,
     )
-    if not mh.batch_first:
+    if not batch_first:
         x = torch.transpose(x, 0, 1)
     x = x.view(*outer_sizes, q_len, -1)
-    return {"output": x, "weight": weight}
+    return x, weight
 
 
 def transformer_forward(

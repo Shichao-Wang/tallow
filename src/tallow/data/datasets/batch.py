@@ -43,14 +43,6 @@ class Batch(Dict[str, BatchElement]):
         )
         # return self._apply_fields("pin_memory")
 
-    def to(self, device: str):
-        return Batch(
-            {
-                key: value.to(device) if hasattr(value, "to") else value
-                for key, value in self.items()
-            }
-        )
-
 
 class DefaultCollator:
     def __init__(self, depth: int) -> None:

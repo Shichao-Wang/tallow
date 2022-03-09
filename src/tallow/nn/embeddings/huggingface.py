@@ -2,7 +2,16 @@ import sys
 from typing import Dict, Literal
 
 import torch
-import transformers
+
+try:
+    import transformers
+except ImportError:
+
+    class HuggingfaceEmbedding:
+        def __init__(self, *args, **kwargs) -> None:
+            raise
+
+
 from torch import nn
 
 from . import classes

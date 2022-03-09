@@ -33,7 +33,9 @@ class LookupTokenizer(tokenizer.Tokenizer):
         self._max_length = max_length
         self._pad_to_max_length = pad_to_max_length
 
-        self._preserved_tokens = preserved_tokens or DEFAULT_PRESERVED_TOKENS
+        if preserved_tokens is None:
+            preserved_tokens = DEFAULT_PRESERVED_TOKENS
+        self._preserved_tokens = preserved_tokens
 
         for name, token in preserved_tokens.items():
             assert token in self._token_to_index

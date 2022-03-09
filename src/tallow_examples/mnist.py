@@ -71,8 +71,8 @@ def main():
         model,
         criterion=CrossEntropyLoss(),
         init_optim=_init_optim,
-        metric=val_metric,
-        _hooks=[ckpt, earlystop],
+        val_metric=val_metric,
+        hooks=[ckpt, earlystop],
     )
 
     datasets = load_datasets("/tmp", batch_size=128)
